@@ -91,7 +91,7 @@ class DQNAgent(object):
                epsilon_eval=0.001,
                epsilon_decay_period=250000,
                K=1,
-               reg_weight=0.1,
+               reg_weight=0.0,
                tf_device='/cpu:*',
                eval_mode=False,
                use_staging=False,
