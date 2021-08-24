@@ -90,6 +90,8 @@ class DQNAgent(object):
                epsilon_train=0.01,
                epsilon_eval=0.001,
                epsilon_decay_period=250000,
+               K=1,
+               reg_weight=0.1,
                tf_device='/cpu:*',
                eval_mode=False,
                use_staging=False,
@@ -177,6 +179,8 @@ class DQNAgent(object):
     self.epsilon_train = epsilon_train
     self.epsilon_eval = epsilon_eval
     self.epsilon_decay_period = epsilon_decay_period
+    self.K = K
+    self.reg_weight = reg_weight
     self.update_period = update_period
     self.eval_mode = eval_mode
     self.training_steps = 0
@@ -290,6 +294,33 @@ class DQNAgent(object):
     return self._replay.rewards + self.cumulative_gamma * replay_next_qt_max * (
         1. - tf.cast(self._replay.terminals, tf.float32))
 
+  def _build_reg_op(self):
+      # Sample K random states. 
+      shape = (self.K, NATURE_DQN_OBSERVATION_SHAPE[0], NATURE_DQN_OBSERVATION_SHAPE[1], NATURE_DQN_STACK_SIZE)
+      random_states = tf.random.uniform(
+        shape=shape, minval=0, maxval=1, dtype=tf.float32)
+
+      # Compute the network's outputs -> computing q-values for all actions. 
+      random_q_values = self.online_convnet(random_states)[0]
+
+      # Select random q-value for each state.
+      # Shape of batch_indices: self.K x 1.
+      batch_indices = tf.cast(tf.range(self.K)[:, None], tf.int64)
+      num_q_values = random_q_values.shape[-1]
+      selected_q_value_indices = tf.random.uniform(shape=(self.K, 1), minval=0, maxval=num_q_values, dtype=tf.int64)
+      batch_selected_q_value_indices = tf.concat([batch_indices, selected_q_value_indices], axis=1)
+      selected_q_values = tf.gather_nd(random_q_values, batch_selected_q_value_indices)
+
+      # Compute the gradient of each network output with respect to each state input. 
+      reg_loss = tf.zeros(shape=(), dtype=tf.dtypes.float32)
+      for k in range(self.K):
+        gradients = tf.expand_dims(tf.gradients(selected_q_values[k], [random_states], stop_gradients=random_states)[0][k], axis=0)
+        gradients_reshaped = tf.compat.v1.layers.flatten(gradients)
+        reg_loss += tf.squeeze(tf.square(tf.norm(gradients_reshaped, axis=-1)))
+      reg_loss /= self.K
+
+      return reg_loss
+
   def _build_train_op(self):
     """Builds a training op.
 
@@ -306,6 +337,11 @@ class DQNAgent(object):
     target = tf.stop_gradient(self._build_target_q_op())
     loss = tf.compat.v1.losses.huber_loss(
         target, replay_chosen_q, reduction=tf.losses.Reduction.NONE)
+
+    if self.reg_weight > 0:
+      reg_loss = self._build_reg_op()
+      loss += self.reg_weight * reg_loss
+
     if self.summary_writer is not None:
       with tf.compat.v1.variable_scope('Losses'):
         tf.compat.v1.summary.scalar('HuberLoss', tf.reduce_mean(loss))
