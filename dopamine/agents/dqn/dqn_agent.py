@@ -335,16 +335,20 @@ class DQNAgent(object):
         name='replay_chosen_q')
 
     target = tf.stop_gradient(self._build_target_q_op())
-    loss = tf.compat.v1.losses.huber_loss(
+    huber_loss = tf.compat.v1.losses.huber_loss(
         target, replay_chosen_q, reduction=tf.losses.Reduction.NONE)
 
     if self.reg_weight > 0:
       reg_loss = self._build_reg_op()
-      loss += self.reg_weight * reg_loss
+      loss = tf.reduce_mean(huber_loss) + self.reg_weight * reg_loss
+    else:
+      loss = huber_loss
 
     if self.summary_writer is not None:
       with tf.compat.v1.variable_scope('Losses'):
-        tf.compat.v1.summary.scalar('HuberLoss', tf.reduce_mean(loss))
+        tf.compat.v1.summary.scalar('HuberLoss', tf.reduce_mean(huber_loss))
+        tf.compat.v1.summary.scalar('RegLoss', reg_loss)
+        tf.compat.v1.summary.scalar('Loss', tf.reduce_mean(loss))
     return self.optimizer.minimize(tf.reduce_mean(loss))
 
   def _build_sync_op(self):
