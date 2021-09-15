@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Gym-specific (non-Atari) utilities.
-
 Some network specifications specific to certain Gym environments are provided
 here.
-
 Includes a wrapper class around Gym environments. This class makes general Gym
 environments conformant with the API Dopamine is expecting.
 """
@@ -58,18 +56,21 @@ gin.constant('gym_lib.MOUNTAINCAR_OBSERVATION_DTYPE', tf.float64)
 gin.constant('gym_lib.MOUNTAINCAR_STACK_SIZE', 1)
 
 
+MUJOCO_GAMES = ('Ant', 'HalfCheetah', 'Hopper', 'Humanoid', 'Walker2d')
+
+
 @gin.configurable
 def create_gym_environment(environment_name=None, version='v0'):
   """Wraps a Gym environment with some basic preprocessing.
-
   Args:
     environment_name: str, the name of the environment to run.
     version: str, version of the environment to run.
-
   Returns:
     A Gym environment with some standard preprocessing.
   """
   assert environment_name is not None
+
+
   full_game_name = '{}-{}'.format(environment_name, version)
   env = gym.make(full_game_name)
   # Strip out the TimeLimit wrapper from Gym, which caps us at 200 steps.
@@ -84,7 +85,6 @@ def create_gym_environment(environment_name=None, version='v0'):
 @gin.configurable
 class BasicDiscreteDomainNetwork(tf.keras.layers.Layer):
   """The fully connected network used to compute the agent's Q-values.
-
     This sub network used within various other models. Since it is an inner
     block, we define it as a layer. These sub networks normalize their inputs to
     lie in range [-1, 1], using min_/max_vals. It supports both DQN- and
@@ -142,9 +142,7 @@ class CartpoleDQNNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     It rescales the input features so they lie in range [-1, 1].
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
@@ -161,13 +159,10 @@ class CartpoleDQNNetwork(tf.keras.Model):
 
 class FourierBasis(object):
   """Fourier Basis linear function approximation.
-
   Requires the ranges for each dimension, and is thus able to use only sine or
   cosine (and uses cosine). So, this has half the coefficients that a full
   Fourier approximation would use.
-
   Many thanks to Will Dabney (wdabney@) for this implementation.
-
   From the paper:
   G.D. Konidaris, S. Osentoski and P.S. Thomas. (2011)
   Value Function Approximation in Reinforcement Learning using the Fourier Basis
@@ -203,13 +198,10 @@ class FourierDQNNetwork(tf.keras.Model):
   def __init__(self, min_vals, max_vals, num_actions, fourier_basis_order=3,
                name=None):
     """Builds the function approximator used to compute the agent's Q-values.
-
     It uses the features of the FourierBasis class and a linear layer
     without bias.
-
     Value Function Approximation in Reinforcement Learning using the Fourier
     Basis", Konidaris, Osentoski and Thomas (2011).
-
     Args:
       min_vals: float, minimum attainable values (must be same shape as
         `state`).
@@ -252,9 +244,7 @@ class CartpoleFourierDQNNetwork(FourierDQNNetwork):
 
   def __init__(self, num_actions, name=None):
     """Builds the function approximator used to compute the agent's Q-values.
-
     It uses the Fourier basis features and a linear function approximator.
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
@@ -269,9 +259,7 @@ class CartpoleRainbowNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, num_atoms, support, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     It rescales the input features to a range that yields improved performance.
-
     Args:
       num_actions: int, number of actions.
       num_atoms: int, the number of buckets of the value function distribution.
@@ -299,9 +287,7 @@ class AcrobotDQNNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     It rescales the input features to a range that yields improved performance.
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
@@ -321,9 +307,7 @@ class AcrobotFourierDQNNetwork(FourierDQNNetwork):
 
   def __init__(self, num_actions, name=None):
     """Builds the function approximator used to compute the agent's Q-values.
-
     It uses the Fourier basis features and a linear function approximator.
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
@@ -339,9 +323,7 @@ class AcrobotRainbowNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, num_atoms, support, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     It rescales the input features to a range that yields improved performance.
-
     Args:
       num_actions: int, number of actions.
       num_atoms: int, the number of buckets of the value function distribution.
@@ -369,7 +351,6 @@ class LunarLanderDQNNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
@@ -389,7 +370,6 @@ class MountainCarDQNNetwork(tf.keras.Model):
 
   def __init__(self, num_actions, name=None):
     """Builds the deep network used to compute the agent's Q-values.
-
     Args:
       num_actions: int, number of actions.
       name: str, used to create scope for network parameters.
