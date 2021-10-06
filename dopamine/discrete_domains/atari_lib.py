@@ -184,8 +184,9 @@ class NatureDQNNetwork(tf.keras.Model):
     return DQNNetworkType(self.dense2(x))
   
   def call_reg(self, state):
-    x = tf.cast(state, tf.float32)
-    x = x / 255
+    # Skip these first two steps.
+    # x = tf.cast(state, tf.float32)
+    # x = x / 255
     x = self.conv1(x)
     x = self.conv2(x)
     x = self.conv3(x)

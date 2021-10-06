@@ -318,7 +318,9 @@ class DQNAgent(object):
       # Select the first K states from the states sampled from the replay buffer.
       states = self._replay.states[0:self.K]
 
-      # TODO: Check that the states are normalized!
+      # Normalize and cast to float dtype.
+      states = tf.cast(states, tf.float32)
+      states = states / 255
 
       # Add Gaussian noise to states from the replay buffer.
       # The standard deviation of the noise is a hyperparameter.
