@@ -21,6 +21,7 @@ DQNAgent.optimizer = @tf.train.RMSPropOptimizer()
 # Smoothness parameters
 DQNAgent.K = 1
 DQNAgent.reg_weight = 0.1
+DQNAgent.noise_stddev = 0.001
 
 tf.train.RMSPropOptimizer.learning_rate = 0.00025
 tf.train.RMSPropOptimizer.decay = 0.95

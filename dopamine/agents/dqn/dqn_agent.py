@@ -92,6 +92,7 @@ class DQNAgent(object):
                epsilon_decay_period=250000,
                K=1,
                reg_weight=0.0,
+               noise_stddev=0.0,
                tf_device='/cpu:*',
                eval_mode=False,
                use_staging=False,
@@ -181,6 +182,7 @@ class DQNAgent(object):
     self.epsilon_decay_period = epsilon_decay_period
     self.K = K
     self.reg_weight = reg_weight
+    self.noise_stddev = noise_stddev
     self.update_period = update_period
     self.eval_mode = eval_mode
     self.training_steps = 0
@@ -295,26 +297,45 @@ class DQNAgent(object):
         1. - tf.cast(self._replay.terminals, tf.float32))
 
   def _build_reg_op(self):
+        
       # Sample K random states. 
-      shape = (self.K, NATURE_DQN_OBSERVATION_SHAPE[0], NATURE_DQN_OBSERVATION_SHAPE[1], NATURE_DQN_STACK_SIZE)
-      random_states = tf.random.uniform(
-        shape=shape, minval=0, maxval=1, dtype=tf.float32)
+      # shape = (self.K, NATURE_DQN_OBSERVATION_SHAPE[0], NATURE_DQN_OBSERVATION_SHAPE[1], NATURE_DQN_STACK_SIZE)
+      # random_states = tf.random.uniform(
+      #   shape=shape, minval=0, maxval=1, dtype=tf.float32)
 
       # Compute the network's outputs -> computing q-values for all actions. 
-      random_q_values = self.online_convnet(random_states)[0]
+      # random_q_values = self.online_convnet(random_states).q_values
+
+      # Select the first K states from the states sampled from the replay buffer.
+      states = self._replay.states[0:self.K]
+
+      # TODO: Check that the states are normalized!
+
+      # Add Gaussian noise to states from the replay buffer.
+      # The standard deviation of the noise is a hyperparameter.
+      shape = (self.K, NATURE_DQN_OBSERVATION_SHAPE[0], NATURE_DQN_OBSERVATION_SHAPE[1], NATURE_DQN_STACK_SIZE)
+      gaussian_noise = tf.random.normal(
+        shape=shape, mean=0.0, stddev=self.noise_stddev, 
+        dtype=tf.dtypes.float32, seed=None, name=None)
+      noisy_states = states + gaussian_noise
+
+      # Compute q_values from these states.
+      noisy_outputs = self.online_convnet.call_reg(noisy_states)
+      noisy_q_values = noisy_outputs.q_values
+      noisy_penultimate_out =  noisy_outputs.penultimate_output
 
       # Select random q-value for each state.
       # Shape of batch_indices: self.K x 1.
       batch_indices = tf.cast(tf.range(self.K)[:, None], tf.int64)
-      num_q_values = random_q_values.shape[-1]
+      num_q_values = noisy_q_values.shape[-1]
       selected_q_value_indices = tf.random.uniform(shape=(self.K, 1), minval=0, maxval=num_q_values, dtype=tf.int64)
       batch_selected_q_value_indices = tf.concat([batch_indices, selected_q_value_indices], axis=1)
-      selected_q_values = tf.gather_nd(random_q_values, batch_selected_q_value_indices)
+      selected_q_values = tf.gather_nd(noisy_q_values, batch_selected_q_value_indices)
 
       # Compute the gradient of each network output with respect to each state input. 
       reg_loss = tf.zeros(shape=(), dtype=tf.dtypes.float32)
       for k in range(self.K):
-        gradients = tf.expand_dims(tf.gradients(selected_q_values[k], [random_states], stop_gradients=random_states)[0][k], axis=0)
+        gradients = tf.expand_dims(tf.gradients(selected_q_values[k], [noisy_penultimate_out], stop_gradients=noisy_penultimate_out)[0][k], axis=0)
         gradients_reshaped = tf.compat.v1.layers.flatten(gradients)
         reg_loss += tf.squeeze(tf.square(tf.norm(gradients_reshaped, axis=-1)))
       reg_loss /= self.K
