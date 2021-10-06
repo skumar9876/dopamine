@@ -97,12 +97,11 @@ class DQNAgent(object):
                eval_mode=False,
                use_staging=False,
                max_tf_checkpoints_to_keep=4,
-               optimizer=tf.compat.v1.train.RMSPropOptimizer(
-                   learning_rate=0.00025,
-                   decay=0.95,
-                   momentum=0.0,
-                   epsilon=0.00001,
-                   centered=True),
+               optimizer=tf.compat.v1.train.AdamOptimizer(
+                   learning_rate=6.25e-5,
+                   beta1=0.9,
+                   beta2=0.999,
+                   epsilon=1.5e-4),
                summary_writer=None,
                summary_writing_frequency=500,
                allow_partial_reload=False):
@@ -149,6 +148,16 @@ class DQNAgent(object):
       allow_partial_reload: bool, whether we allow reloading a partial agent
         (for instance, only the network parameters).
     """
+    """
+    # Removed RMSPropOptimizer below and replaced with Adam.
+    optimizer=tf.compat.v1.train.RMSPropOptimizer(
+                   learning_rate=0.00025,
+                   decay=0.95,
+                   momentum=0.0,
+                   epsilon=0.00001,
+                   centered=True)
+    """
+
     assert isinstance(observation_shape, tuple)
     logging.info('Creating %s agent with the following parameters:',
                  self.__class__.__name__)
