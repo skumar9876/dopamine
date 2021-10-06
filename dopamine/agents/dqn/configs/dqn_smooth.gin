@@ -16,7 +16,7 @@ DQNAgent.epsilon_train = 0.01
 DQNAgent.epsilon_eval = 0.001
 DQNAgent.epsilon_decay_period = 250000  # agent steps
 DQNAgent.tf_device = '/gpu:0'  # use '/cpu:*' for non-GPU version
-DQNAgent.optimizer = @tf.train.RMSPropOptimizer()
+DQNAgent.optimizer = @tf.train.AdamOptimizer()
 
 # Smoothness parameters
 DQNAgent.K = 1
