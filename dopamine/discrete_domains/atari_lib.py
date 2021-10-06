@@ -187,6 +187,7 @@ class NatureDQNNetwork(tf.keras.Model):
     # Skip these first two steps.
     # x = tf.cast(state, tf.float32)
     # x = x / 255
+    x = state
     x = self.conv1(x)
     x = self.conv2(x)
     x = self.conv3(x)
